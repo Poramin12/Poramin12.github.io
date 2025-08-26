@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมงู - Snake Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        #gameContainer {
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        #gameCanvas {
+            border: 3px solid #fff;
+            border-radius: 15px;
+            background: linear-gradient(45deg, #0f4c75, #3282b8, #0f4c75);
+            background-size: 40px 40px;
+            animation: backgroundMove 4s linear infinite;
+            box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.1);
+        }
+
+        @keyframes backgroundMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 40px; }
+        }
+
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .score-item {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .score-value {
+            display: block;
+            font-size: 24px;
+            color: #ffd700;
+            margin-top: 5px;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+        }
+
+        #gameOverScreen {
+            display: none;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .difficulty-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-btn:hover {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        .difficulty-btn.selected {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        #powerUpIndicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            min-width: 120px;
+            text-align: center;
+            display: none;
+        }
+
+        .power-up-timer {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57);
+            transition: width 0.1s linear;
+        }
+
+        @media (max-width: 768px) {
+            #gameContainer {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .btn {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div class="score-item">
+                🐍 คะแนน
+                <span class="score-value" id="score">0</span>
+            </div>
+            <div class="score-item">
+                🏆 สูงสุด
+                <span class="score-value" id="highScore">0</span>
+            </div>
+            <div class="score-item">
+                📏 ความยาว
+                <span class="score-value" id="length">1</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <div id="powerUpIndicator">
+            <div id="powerUpText">⚡ พาวเวอร์อัพ</div>
+            <div class="power-up-timer">
+                <div class="timer-bar" id="timerBar"></div>
+            </div>
+        </div>
+
+        <div id="startScreen">
+            <h1>🐍 Snake Adventure 🍎</h1>
+            
+            <div class="difficulty-selector">
+                <h3>เลือกระดับความยาก:</h3>
+                <div>
+                    <button class="difficulty-btn" data-speed="150">🐌 ง่าย</button>
+                    <button class="difficulty-btn selected" data-speed="100">🐍 ปกติ</button>
+                    <button class="difficulty-btn" data-speed="60">⚡ ยาก</button>
+                </div>
+            </div>
+
+            <button class="btn" onclick="startGame()">🎮 เริ่มเกม</button>
+            
+            <div class="controls">
+                ใช้ลูกศร หรือ WASD เพื่อควบคุม<br>
+                🍎 = คะแนน +10 | 🍓 = คะแนน +20 | ⚡ = พาวเวอร์อัพพิเศษ<br>
+                หลีกเลี่ยงการชนกำแพงและตัวเอง!
+            </div>
+        </div>
+
+        <div id="gameOverScreen">
+            <h2>🎯 เกมจบแล้ว! 🎯</h2>
+            <div style="margin: 20px 0; font-size: 20px;">
+                คะแนนของคุณ: <span style="color: #ffd700;" id="finalScore">0</span>
+            </div>
+            <div style="margin: 10px 0; font-size: 18px;" id="newRecordText"></div>
+            <button class="btn" onclick="restartGame()">🔄 เล่นใหม่</button>
+            <button class="btn" onclick="backToMenu()" style="background: linear-gradient(45deg, #48dbfb, #0abde3);">🏠 เมนูหลัก</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const powerUpIndicator = document.getElementById('powerUpIndicator');
+
+        // Game state
+        let gameRunning = false;
+        let score = 0;
+        let highScore = localStorage.getItem('snakeHighScore') || 0;
+        let gameSpeed = 100;
+        let lastTime = 0;
+
+        // Grid settings
+        const gridSize = 20;
+        const gridCount = canvas.width / gridSize;
+
+        // Snake
+        let snake = [{ x: 10, y: 10 }];
+        let direction = { x: 0, y: 0 };
+        let nextDirection = { x: 0, y: 0 };
+
+        // Food and power-ups
+        let foods = [];
+        let powerUps = [];
+        let activePowerUp = null;
+        let powerUpTimer = 0;
+
+        // Food types
+        const foodTypes = [
+            { emoji: '🍎', points: 10, color: '#ff4757', weight: 70 },
+            { emoji: '🍓', points: 20, color: '#ff3838', weight: 20 },
+            { emoji: '🍇', points: 30, color: '#8c7ae6', weight: 8 },
+            { emoji: '🍊', points: 15, color: '#ffa502', weight: 30 }
+        ];
+
+        const powerUpTypes = [
+            { 
+                emoji: '⚡', 
+                name: 'เร็วขึ้น', 
+                effect: () => { gameSpeed *= 0.7; },
+                duration: 5000,
+                color: '#ffff00'
+            },
+            { 
+                emoji: '🛡️', 
+                name: 'ผ่านกำแพง', 
+                effect: () => { activePowerUp.wallPass = true; },
+                duration: 8000,
+                color: '#00d2d3'
+            },
+            { 
+                emoji: '💎', 
+                name: 'คะแนนx2', 
+                effect: () => { activePowerUp.doubleScore = true; },
+                duration: 10000,
+                color: '#5f27cd'
+            }
+        ];
+
+        // Initialize high score display
+        document.getElementById('highScore').textContent = highScore;
+
+        // Difficulty selection
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+                gameSpeed = parseInt(this.dataset.speed);
+            });
+        });
+
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            snake = [{ x: 10, y: 10 }];
+            direction = { x: 0, y: 0 };
+            nextDirection = { x: 0, y: 0 };
+            foods = [];
+            powerUps = [];
+            activePowerUp = null;
+            powerUpTimer = 0;
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            powerUpIndicator.style.display = 'none';
+
+            generateFood();
+            generatePowerUp();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(currentTime) {
+            if (!gameRunning) return;
+
+            if (currentTime - lastTime >= gameSpeed) {
+                update();
+                draw();
+                lastTime = currentTime;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Update direction
+            direction = { ...nextDirection };
+
+            // Update power-up timer
+            if (activePowerUp && powerUpTimer > 0) {
+                powerUpTimer -= gameSpeed;
+                updatePowerUpIndicator();
+                
+                if (powerUpTimer <= 0) {
+                    deactivatePowerUp();
+                }
+            }
+
+            // Move snake
+            if (direction.x !== 0 || direction.y !== 0) {
+                const head = { ...snake[0] };
+                head.x += direction.x;
+                head.y += direction.y;
+
+                // Wall collision (with power-up exception)
+                if (!activePowerUp?.wallPass) {
+                    if (head.x < 0 || head.x >= gridCount || head.y < 0 || head.y >= gridCount) {
+                        gameOver();
+                        return;
+                    }
+                } else {
+                    // Wrap around walls
+                    head.x = (head.x + gridCount) % gridCount;
+                    head.y = (head.y + gridCount) % gridCount;
+                }
+
+                // Self collision
+                if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    gameOver();
+                    return;
+                }
+
+                snake.unshift(head);
+
+                // Check food collision
+                let foodEaten = false;
+                foods = foods.filter(food => {
+                    if (food.x === head.x && food.y === head.y) {
+                        const points = activePowerUp?.doubleScore ? food.points * 2 : food.points;
+                        score += points;
+                        foodEaten = true;
+                        return false;
+                    }
+                    return true;
+                });
+
+                // Check power-up collision
+                powerUps = powerUps.filter(powerUp => {
+                    if (powerUp.x === head.x && powerUp.y === head.y) {
+                        activatePowerUp(powerUp);
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (!foodEaten) {
+                    snake.pop();
+                } else {
+                    generateFood();
+                    // Random chance to generate power-up
+                    if (Math.random() < 0.3) {
+                        generatePowerUp();
+                    }
+                }
+
+                updateUI();
+            }
+        }
+
+        function draw() {
+            // Clear canvas with gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#0f4c75');
+            gradient.addColorStop(0.5, '#3282b8');
+            gradient.addColorStop(1, '#0f4c75');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= gridCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // Draw snake
+            snake.forEach((segment, index) => {
+                const x = segment.x * gridSize;
+                const y = segment.y * gridSize;
+
+                if (index === 0) {
+                    // Head
+                    const headGradient = ctx.createRadialGradient(
+                        x + gridSize/2, y + gridSize/2, 0,
+                        x + gridSize/2, y + gridSize/2, gridSize/2
+                    );
+                    headGradient.addColorStop(0, '#00ff00');
+                    headGradient.addColorStop(1, '#008000');
+                    ctx.fillStyle = headGradient;
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(x + 2, y + 2, gridSize - 4, gridSize - 4, 8);
+                    ctx.fill();
+
+                    // Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(x + 8, y + 8, 3, 0, Math.PI * 2);
+                    ctx.arc(x + 16, y + 8, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(x + 8, y + 8, 1.5, 0, Math.PI * 2);
+                    ctx.arc(x + 16, y + 8, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Body
+                    const intensity = Math.max(0.3, 1 - (index / snake.length));
+                    const bodyGradient = ctx.createLinearGradient(x, y, x + gridSize, y + gridSize);
+                    bodyGradient.addColorStop(0, `rgba(0, 255, 0, ${intensity})`);
+                    bodyGradient.addColorStop(1, `rgba(0, 128, 0, ${intensity * 0.7})`);
+                    ctx.fillStyle = bodyGradient;
+                    
+                    ctx.beginPath();
+                    ctx.roundRect(x + 3, y + 3, gridSize - 6, gridSize - 6, 5);
+                    ctx.fill();
+                }
+
+                // Power-up glow effect
+                if (activePowerUp && index === 0) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = activePowerUp.color;
+                    ctx.strokeStyle = activePowerUp.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 1, y + 1, gridSize - 2, gridSize - 2, 8);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            });
+
+            // Draw food
+            foods.forEach(food => {
+                const x = food.x * gridSize;
+                const y = food.y * gridSize;
+
+                // Glow effect
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = food.color;
+                
+                ctx.fillStyle = food.color;
+                ctx.beginPath();
+                ctx.arc(x + gridSize/2, y + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Emoji
+                ctx.shadowBlur = 0;
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'white';
+                ctx.fillText(food.emoji, x + gridSize/2, y + gridSize/2 + 5);
+            });
+
+            // Draw power-ups
+            powerUps.forEach(powerUp => {
+                const x = powerUp.x * gridSize;
+                const y = powerUp.y * gridSize;
+
+                // Animated glow
+                const time = Date.now() * 0.005;
+                const glowSize = 10 + Math.sin(time) * 5;
+                
+                ctx.shadowBlur = glowSize;
+                ctx.shadowColor = powerUp.color;
+                
+                ctx.fillStyle = powerUp.color;
+                ctx.beginPath();
+                ctx.arc(x + gridSize/2, y + gridSize/2, gridSize/2 - 1, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Emoji
+                ctx.shadowBlur = 0;
+                ctx.font = '18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'white';
+                ctx.fillText(powerUp.emoji, x + gridSize/2, y + gridSize/2 + 6);
+            });
+        }
+
+        function generateFood() {
+            if (foods.length >= 3) return;
+
+            let position;
+            do {
+                position = {
+                    x: Math.floor(Math.random() * gridCount),
+                    y: Math.floor(Math.random() * gridCount)
+                };
+            } while (
+                snake.some(segment => segment.x === position.x && segment.y === position.y) ||
+                foods.some(food => food.x === position.x && food.y === position.y) ||
+                powerUps.some(powerUp => powerUp.x === position.x && powerUp.y === position.y)
+            );
+
+            // Weighted random selection
+            const totalWeight = foodTypes.reduce((sum, type) => sum + type.weight, 0);
+            let random = Math.random() * totalWeight;
+            
+            let selectedType = foodTypes[0];
+            for (const type of foodTypes) {
+                random -= type.weight;
+                if (random <= 0) {
+                    selectedType = type;
+                    break;
+                }
+            }
+
+            foods.push({
+                ...position,
+                ...selectedType
+            });
+        }
+
+        function generatePowerUp() {
+            if (powerUps.length >= 1) return;
+
+            let position;
+            do {
+                position = {
+                    x: Math.floor(Math.random() * gridCount),
+                    y: Math.floor(Math.random() * gridCount)
+                };
+            } while (
+                snake.some(segment => segment.x === position.x && segment.y === position.y) ||
+                foods.some(food => food.x === position.x && food.y === position.y) ||
+                powerUps.some(powerUp => powerUp.x === position.x && powerUp.y === position.y)
+            );
+
+            const selectedType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            
+            powerUps.push({
+                ...position,
+                ...selectedType
+            });
+        }
+
+        function activatePowerUp(powerUp) {
+            deactivatePowerUp(); // Clear any existing power-up
+            
+            activePowerUp = { ...powerUp };
+            powerUpTimer = powerUp.duration;
+            
+            powerUp.effect();
+            
+            document.getElementById('powerUpText').textContent = `${powerUp.emoji} ${powerUp.name}`;
+            powerUpIndicator.style.display = 'block';
+            updatePowerUpIndicator();
+        }
+
+        function deactivatePowerUp() {
+            if (activePowerUp) {
+                // Reset any temporary effects
+                if (activePowerUp.name === 'เร็วขึ้น') {
+                    gameSpeed = document.querySelector('.difficulty-btn.selected').dataset.speed;
+                }
+                
+                activePowerUp = null;
+                powerUpTimer = 0;
+                powerUpIndicator.style.display = 'none';
+            }
+        }
+
+        function updatePowerUpIndicator() {
+            if (activePowerUp && powerUpTimer > 0) {
+                const percentage = (powerUpTimer / activePowerUp.duration) * 100;
+                document.getElementById('timerBar').style.width = percentage + '%';
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('length').textContent = snake.length;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('snakeHighScore', highScore);
+                document.getElementById('newRecordText').textContent = '🎉 สถิติใหม่! 🎉';
+                document.getElementById('newRecordText').style.color = '#ffd700';
+            } else {
+                document.getElementById('newRecordText').textContent = '';
+            }
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('highScore').textContent = highScore;
+            gameOverScreen.style.display = 'flex';
+            
+            deactivatePowerUp();
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        function backToMenu() {
+            startScreen.style.display = 'flex';
+            gameOverScreen.style.display = 'none';
+        }
+
+        // Controls
+        document.addEventListener('keydown', function(event) {
+            if (!gameRunning) return;
+
+            switch(event.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    if (direction.y === 0) nextDirection = { x: 0, y: -1 };
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    if (direction.y === 0) nextDirection = { x: 0, y: 1 };
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    if (direction.x === 0) nextDirection = { x: -1, y: 0 };
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    if (direction.x === 0) nextDirection = { x: 1, y: 0 };
+                    break;
+            }
+        });
+
+        // Touch controls for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', function(event) {
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+            event.preventDefault();
+        });
+
+        canvas.addEventListener('touchend', function(event) {
+            if (!gameRunning) return;
+            
+            const touchEndX = event.changedTouches[0].clientX;
+            const touchEndY = event.changedTouches[0].clientY;
+            
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal swipe
+                if (diffX > 30 && direction.x === 0) {
+                    nextDirection = { x: 1, y: 0 }; // Right
+                } else if (diffX < -30 && direction.x === 0) {
+                    nextDirection = { x: -1, y: 0 }; // Left
+                }
+            } else {
+                // Vertical swipe
+                if (diffY > 30 && direction.y === 0) {
+                    nextDirection = { x: 0, y: 1 }; // Down
+                } else if (diffY < -30 && direction.y === 0) {
+                    nextDirection = { x: 0, y: -1 }; // Up
+                }
+            }
+            
+            event.preventDefault();
+        });
+
+        // Prevent scrolling on mobile
+        document.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+        }, { passive: false });
+
+        // Add roundRect polyfill for older browsers
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                this.beginPath();
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.lineTo(x + width, y + height - radius);
+                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.lineTo(x + radius, y + height);
+                this.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.lineTo(x, y + radius);
+                this.quadraticCurveTo(x, y, x + radius, y);
+                this.closePath();
+                return this;
+            };
+        }
+    </script>
+</body>
+</html>
